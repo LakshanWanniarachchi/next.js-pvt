@@ -1,0 +1,40 @@
+name: Update All Branches After Main Merge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all branches
+
+      - name: Set Up Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Fetch All Branches
+        run: |
+          git fetch --all
+
+      - name: Get All Branches
+        id: branches
+        run: |
+          # List all branches except 'main'
+          git branch -r | grep -v "origin/main" | sed 's/origin\///' > branches.txt
+          echo "::set-output name=branches::$(cat branches.txt | tr '\n' ' ')"
+
+      - name: Update Each Branch
+        run: |
+          for branch in $(echo "${{ steps.branches.outputs.branches }}"); do
+            echo "Updating branch: $branch"
+            git checkout $branch
+            git merge origin/main -m "Merge updated main into $branch"
+            git push origin $branch
+          done
